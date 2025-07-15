@@ -1,18 +1,19 @@
 import os
 import glob
+import asyncio
 from dotenv import load_dotenv
 from flask import Flask, request
 from threading import Thread
 import discord
 from discord.ext import commands
-import asyncio
+from youtube import get_latest_video  # ← 追加
 
 # ====== 環境変数読み込み ======
 load_dotenv()
 TOKEN = os.getenv("DISCORD_TOKEN")
 
 # ====== Discord Bot の設定 ======
-intents = discord.Intents.all()  # 特権インテントを含む
+intents = discord.Intents.all()
 bot = commands.Bot(command_prefix="!", intents=intents)
 
 @bot.event
@@ -50,19 +51,28 @@ def keep_alive():
 async def on_message(message):
     if message.author.bot:
         return
-    await bot.process_commands(message)  # ← これを忘れるとコマンドが2回実行されることがある
+    await bot.process_commands(message)
 
 # ====== コマンドハンドラ読み込み ======
 async def load_commands():
     for filepath in glob.glob("commands/*.py"):
         name = os.path.splitext(os.path.basename(filepath))[0]
-        print(f"🔄 Loading command: {name}")  # ← ログ出力を追加
+        print(f"🔄 Loading command: {name}")
         await bot.load_extension(f"commands.{name}")
 
-# ====== トリガー処理（仮） ======
+# ====== トリガー処理 ======
 async def trigger():
     print("🔔 Trigger called! (10 POSTs received)")
-    # 本来はYouTube通知などの処理がここに入る予定
+
+    channel_id = "UC_x5XG1OV2P6uZZ5FSM9Ttw"
+    video = get_latest_video(channel_id)
+
+    if video:
+        print("📹 最新動画:")
+        print("タイトル:", video['title'])
+        print("URL:", video['link'])
+    else:
+        print("❌ 動画が取得できませんでした。")
 
 # ====== 実行 ======
 if __name__ == "__main__":
