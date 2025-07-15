@@ -5,11 +5,13 @@ from models.notification import Session, Notification
 class Notify(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
+        self.notify_group = app_commands.Group(name="notify", description="通知に関するコマンド")
 
-    # グループ定義
-    notify = app_commands.Group(name="notify", description="通知に関するコマンド")
+        # サブコマンドの登録
+        self.notify_group.command(name="configure", description="通知設定")(self.configure)
+        self.notify_group.command(name="delete", description="通知設定削除")(self.delete)
+        self.notify_group.command(name="status", description="通知設定確認")(self.status)
 
-    @notify.command(name="configure", description="通知設定")
     async def configure(self, interaction: Interaction):
         voice = interaction.user.voice
         if not voice or not voice.channel:
@@ -28,7 +30,6 @@ class Notify(commands.Cog):
 
         await interaction.response.send_message(f"{voice.channel.name} への入室通知をこのチャンネルに設定したよ～")
 
-    @notify.command(name="delete", description="通知設定削除")
     async def delete(self, interaction: Interaction):
         session = Session()
         session.query(Notification).filter_by(
@@ -39,7 +40,6 @@ class Notify(commands.Cog):
         session.close()
         await interaction.response.send_message("通知設定を削除したよ～")
 
-    @notify.command(name="status", description="このチャンネルの通知設定確認")
     async def status(self, interaction: Interaction):
         session = Session()
         notifs = session.query(Notification).filter_by(
@@ -60,7 +60,7 @@ class Notify(commands.Cog):
         existing = self.bot.tree.get_command("notify")
         if existing:
             self.bot.tree.remove_command("notify")
-        self.bot.tree.add_command(self.notify)
+        self.bot.tree.add_command(self.notify_group)
 
 async def setup(bot):
     await bot.add_cog(Notify(bot))
