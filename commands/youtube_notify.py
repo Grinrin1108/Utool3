@@ -1,45 +1,74 @@
-from discord import app_commands
+from discord import app_commands, Interaction, Embed
 from discord.ext import commands
-import sqlite3
+from models.youtube import Session, YouTubeChannel
 
-class YoutubeNotify(commands.Cog):
+class YouTubeNotify(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        self.init_db()
+        self.youtube_group = app_commands.Group(name="youtube", description="YouTube通知の設定")
 
-    def init_db(self):
-        self.conn = sqlite3.connect("database.db")
-        cursor = self.conn.cursor()
-        cursor.execute('''CREATE TABLE IF NOT EXISTS notifications (
-            guild_id TEXT,
-            text_channel_id TEXT,
-            youtube_channel_id TEXT
-        )''')
-        self.conn.commit()
+        # サブコマンドの登録
+        self.youtube_group.command(name="add", description="通知するYouTubeチャンネルを追加")(self.add)
+        self.youtube_group.command(name="remove", description="通知チャンネルを削除")(self.remove)
+        self.youtube_group.command(name="list", description="通知対象のチャンネル一覧を表示")(self.list_channels)
 
-    @app_commands.command(name="youtube_add", description="YouTube通知を追加するよ～")
-    @app_commands.describe(channel_id="YouTubeのチャンネルID")
-    async def add_notify(self, interaction, channel_id: str):
-        cursor = self.conn.cursor()
-        cursor.execute("INSERT INTO notifications VALUES (?, ?, ?)", (
-            str(interaction.guild_id),
-            str(interaction.channel_id),
-            channel_id
-        ))
-        self.conn.commit()
-        await interaction.response.send_message(f"✅ 通知追加完了: `{channel_id}`")
+    async def add(self, interaction: Interaction, channel_id: str):
+        session = Session()
+        existing = session.query(YouTubeChannel).filter_by(
+            guild_id=str(interaction.guild_id),
+            channel_id=channel_id
+        ).first()
 
-    @app_commands.command(name="youtube_remove", description="通知を削除するよ～")
-    @app_commands.describe(channel_id="YouTubeのチャンネルID")
-    async def remove_notify(self, interaction, channel_id: str):
-        cursor = self.conn.cursor()
-        cursor.execute("DELETE FROM notifications WHERE guild_id=? AND text_channel_id=? AND youtube_channel_id=?", (
-            str(interaction.guild_id),
-            str(interaction.channel_id),
-            channel_id
-        ))
-        self.conn.commit()
-        await interaction.response.send_message(f"🗑️ 削除完了: `{channel_id}`")
+        if existing:
+            await interaction.response.send_message("そのチャンネルはすでに登録されています。", ephemeral=True)
+        else:
+            yt = YouTubeChannel(
+                guild_id=str(interaction.guild_id),
+                text_channel_id=str(interaction.channel_id),
+                channel_id=channel_id
+            )
+            session.add(yt)
+            session.commit()
+            await interaction.response.send_message(f"チャンネルID `{channel_id}` を通知対象に追加しました！")
+
+        session.close()
+
+    async def remove(self, interaction: Interaction, channel_id: str):
+        session = Session()
+        deleted = session.query(YouTubeChannel).filter_by(
+            guild_id=str(interaction.guild_id),
+            text_channel_id=str(interaction.channel_id),
+            channel_id=channel_id
+        ).delete()
+        session.commit()
+        session.close()
+
+        if deleted:
+            await interaction.response.send_message("チャンネルを削除しました。")
+        else:
+            await interaction.response.send_message("そのチャンネルは登録されていません。", ephemeral=True)
+
+    async def list_channels(self, interaction: Interaction):
+        session = Session()
+        channels = session.query(YouTubeChannel).filter_by(
+            guild_id=str(interaction.guild_id),
+            text_channel_id=str(interaction.channel_id)
+        ).all()
+        session.close()
+
+        if not channels:
+            await interaction.response.send_message("登録されているチャンネルはありません。", ephemeral=True)
+            return
+
+        description = "\n".join([f"`{ch.channel_id}`" for ch in channels])
+        embed = Embed(title="通知対象のYouTubeチャンネル一覧", description=description)
+        await interaction.response.send_message(embed=embed)
+
+    async def cog_load(self):
+        existing = self.bot.tree.get_command("youtube")
+        if existing:
+            self.bot.tree.remove_command("youtube")
+        self.bot.tree.add_command(self.youtube_group)
 
 async def setup(bot):
-    await bot.add_cog(YoutubeNotify(bot))
+    await bot.add_cog(YouTubeNotify(bot))
