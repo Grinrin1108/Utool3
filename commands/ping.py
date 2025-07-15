@@ -8,5 +8,5 @@ class Ping(commands.Cog):
     async def ping(self, ctx):
         await ctx.send("🏓 pong!")
 
-def setup(bot):
-    bot.add_cog(Ping(bot))
+async def setup(bot):  # ← 非同期に変更
+    await bot.add_cog(Ping(bot))  # ← await を追加
