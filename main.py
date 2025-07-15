@@ -8,19 +8,24 @@ import discord
 from discord.ext import commands
 from youtube import get_latest_video  # ← 追加
 
-# ====== 環境変数読み込み ======
+# 環境変数読み込み
 load_dotenv()
 TOKEN = os.getenv("DISCORD_TOKEN")
 
-# ====== Discord Bot の設定 ======
 intents = discord.Intents.all()
 bot = commands.Bot(command_prefix="!", intents=intents)
 
+# 起動時イベント
 @bot.event
 async def on_ready():
     print(f"✅ Logged in as {bot.user}")
+    try:
+        synced = await bot.tree.sync()
+        print(f"🔄 Synced {len(synced)} slash commands.")
+    except Exception as e:
+        print(f"❌ Sync failed: {e}")
 
-# ====== Flask サーバー設定 ======
+# Flaskサーバー設定（あなたの用途に合わせて）
 app = Flask(__name__)
 post_count = 0
 
@@ -53,14 +58,14 @@ async def on_message(message):
         return
     await bot.process_commands(message)
 
-# ====== コマンドハンドラ読み込み ======
+# コマンド拡張読み込み
 async def load_commands():
     for filepath in glob.glob("commands/*.py"):
         name = os.path.splitext(os.path.basename(filepath))[0]
         print(f"🔄 Loading command: {name}")
-        await bot.load_extension(f"commands.{name}")
+        bot.load_extension(f"commands.{name}")  # awaitは不要
 
-# ====== トリガー処理 ======
+# トリガー処理（あなたの用途に合わせて）
 async def trigger():
     print("🔔 Trigger called! (10 POSTs received)")
 
@@ -74,7 +79,6 @@ async def trigger():
     else:
         print("❌ 動画が取得できませんでした。")
 
-# ====== 実行 ======
 if __name__ == "__main__":
     keep_alive()
 
