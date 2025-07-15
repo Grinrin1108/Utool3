@@ -1,17 +1,15 @@
-from discord import app_commands
+from discord import app_commands, Interaction, Embed
 from discord.ext import commands
-from discord import Interaction, Embed
 from models.notification import Session, Notification
 
 class Notify(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    @app_commands.command(name="notify")
-    async def notify_group(self, interaction: Interaction):
-        await interaction.response.send_message("サブコマンドを使ってね～", ephemeral=True)
+    # グループ定義
+    notify = app_commands.Group(name="notify", description="通知に関するコマンド")
 
-    @app_commands.command(name="configure", description="通知設定")
+    @notify.command(name="configure", description="通知設定")
     async def configure(self, interaction: Interaction):
         voice = interaction.user.voice
         if not voice or not voice.channel:
@@ -30,7 +28,7 @@ class Notify(commands.Cog):
 
         await interaction.response.send_message(f"{voice.channel.name} への入室通知をこのチャンネルに設定したよ～")
 
-    @app_commands.command(name="delete", description="通知設定削除")
+    @notify.command(name="delete", description="通知設定削除")
     async def delete(self, interaction: Interaction):
         session = Session()
         session.query(Notification).filter_by(
@@ -41,7 +39,7 @@ class Notify(commands.Cog):
         session.close()
         await interaction.response.send_message("通知設定を削除したよ～")
 
-    @app_commands.command(name="status", description="このチャンネルの通知設定確認")
+    @notify.command(name="status", description="このチャンネルの通知設定確認")
     async def status(self, interaction: Interaction):
         session = Session()
         notifs = session.query(Notification).filter_by(
@@ -57,6 +55,9 @@ class Notify(commands.Cog):
         channels = "\n".join([f"<#{n.voice_channel_id}>" for n in notifs])
         embed = Embed(title="通知設定中のボイスチャンネル", description=channels)
         await interaction.response.send_message(embed=embed)
+
+    async def cog_load(self):
+        self.bot.tree.add_command(self.notify)  # グループコマンドを登録
 
 async def setup(bot):
     await bot.add_cog(Notify(bot))
