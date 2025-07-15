@@ -62,6 +62,8 @@ async def on_message(message):
 async def load_commands():
     for filepath in glob.glob("commands/*.py"):
         name = os.path.splitext(os.path.basename(filepath))[0]
+        if name == "__init__":
+            continue  # __init__.pyは読み飛ばす
         print(f"🔄 Loading command: {name}")
         await bot.load_extension(f"commands.{name}")
 
