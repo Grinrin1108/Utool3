@@ -6,8 +6,12 @@ from flask import Flask, request
 from threading import Thread
 import discord
 from discord.ext import commands
-from models.notification import Session, Notification
+
+# --- ここでモデルもまとめてインポート ---
+from models.youtube_db import Base, engine, Session
+from models.youtube_channel import YouTubeChannel  # あれば
 from models.youtube_notification import YouTubeNotification
+
 from models.youtube import get_latest_video
 from utils.youtube_checker import start_youtube_check
 from datetime import datetime
@@ -138,21 +142,16 @@ async def check_youtube_updates():
 
         await asyncio.sleep(300)  # 5分ごとにチェック
 
-# ====== 実行 ======
+# ====== 起動時にテーブル作成 ======
 if __name__ == "__main__":
-    # ✅ データベースのテーブルを作成（なければ）
-    from models.youtube_notification import Base as YTBase
-    from models.notification import Base as NotificationBase
-    from models.youtube_db import engine
-
-    YTBase.metadata.create_all(bind=engine)
-    NotificationBase.metadata.create_all(bind=engine)
+    # --- ここで全テーブルを一括作成 ---
+    Base.metadata.create_all(bind=engine)
 
     keep_alive()
 
     async def start_bot():
         await load_commands()
-        asyncio.create_task(check_youtube_updates())  # ✅ 修正済み
+        asyncio.create_task(check_youtube_updates())
         await bot.start(TOKEN)
 
     asyncio.run(start_bot())

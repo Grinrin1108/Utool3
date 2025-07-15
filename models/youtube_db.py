@@ -13,5 +13,4 @@ class YouTubeChannel(Base):
     last_video_id = Column(String)  # 最後に通知した動画のID
 
 engine = create_engine("sqlite:///youtube.db")  # SQLite の場合
-Base.metadata.create_all(engine)
 Session = sessionmaker(bind=engine)

@@ -1,6 +1,5 @@
 from sqlalchemy import Column, Integer, String
-from sqlalchemy.ext.declarative import declarative_base
-from models.youtube_db import Base  # 共通のBaseを使う場合はこちら
+from models.youtube_db import Base  # 共通のBaseを使う
 
 class YouTubeNotification(Base):
     __tablename__ = "youtube_notifications"
