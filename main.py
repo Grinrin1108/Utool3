@@ -46,6 +46,12 @@ def keep_alive():
     thread = Thread(target=run_flask)
     thread.start()
 
+@bot.event
+async def on_message(message):
+    if message.author.bot:
+        return
+    await bot.process_commands(message)  # ← これを忘れるとコマンドが2回実行されることがある
+
 # ====== コマンドハンドラ読み込み ======
 async def load_commands():
     for filepath in glob.glob("commands/*.py"):
