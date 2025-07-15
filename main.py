@@ -141,7 +141,7 @@ if __name__ == "__main__":
 
     async def start_bot():
         await load_commands()
-        bot.loop.create_task(check_youtube_updates())  # YouTube通知起動
+        asyncio.create_task(check_youtube_updates())  # ✅ 修正済み
         await bot.start(TOKEN)
 
     asyncio.run(start_bot())
