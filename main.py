@@ -7,14 +7,14 @@ from threading import Thread
 import discord
 from discord.ext import commands
 
-# --- ここでモデルもまとめてインポート ---
 from models.youtube_db import Base, engine, Session
-from models.youtube_channel import YouTubeChannel  # あれば
 from models.youtube_notification import YouTubeNotification
+from models.notification import Notification  # ← ここを追加
 
 from models.youtube import get_latest_video
 from utils.youtube_checker import start_youtube_check
 from datetime import datetime
+
 
 # ====== 環境変数読み込み ======
 load_dotenv()
