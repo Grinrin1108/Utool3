@@ -140,6 +140,13 @@ async def check_youtube_updates():
 
 # ====== 実行 ======
 if __name__ == "__main__":
+    # 🔧 DB テーブル作成
+    from models.youtube_notification import Base as YTBase
+    from models.notification import Base as NotificationBase
+    from models.youtube_db import engine
+    YTBase.metadata.create_all(bind=engine)
+    NotificationBase.metadata.create_all(bind=engine)
+
     keep_alive()
 
     async def start_bot():

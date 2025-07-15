@@ -1,8 +1,12 @@
-# models/youtube_notification.py
-from sqlalchemy import Column, String
-from models.notification import Base
+from sqlalchemy import Column, Integer, String
+from sqlalchemy.ext.declarative import declarative_base
+from models.youtube_db import Base  # 共通のBaseを使う場合はこちら
 
 class YouTubeNotification(Base):
     __tablename__ = "youtube_notifications"
-    youtube_channel_id = Column(String, primary_key=True)
-    text_channel_id = Column(String, primary_key=True)
+
+    id = Column(Integer, primary_key=True)
+    guild_id = Column(String)
+    youtube_channel_id = Column(String)
+    text_channel_id = Column(String)
+    last_video_id = Column(String, nullable=True)
