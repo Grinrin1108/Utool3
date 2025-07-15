@@ -9,6 +9,7 @@ from discord.ext import commands
 from models.notification import Session, Notification
 from models.youtube_notification import YouTubeNotification
 from models.youtube import get_latest_video
+from utils.youtube_checker import start_youtube_check
 from datetime import datetime
 
 # ====== 環境変数読み込み ======
@@ -51,6 +52,8 @@ async def on_ready():
     print(f"✅ Logged in as {bot.user}")
     activity = discord.CustomActivity(name="いたずら中😈")
     await bot.change_presence(activity=activity)
+    await bot.tree.sync()
+    start_youtube_check(bot)  # 🔔 通知ループ開始！
     try:
         synced = await bot.tree.sync()
         print(f"🔄 Synced {len(synced)} slash commands.")
