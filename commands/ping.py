@@ -7,6 +7,7 @@ class Ping(commands.Cog):
     @commands.command()
     async def ping(self, ctx):
         await ctx.send("🏓 pong!")
+        print(f"🏓 Ping command used by {ctx.author} in {ctx.channel}")
 
 async def setup(bot):
     # ここで二重登録していないか注意！
