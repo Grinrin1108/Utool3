@@ -1,4 +1,14 @@
-discord.py
-python-dotenv
+# Discord関連
+discord.py>=2.3.2
+
+# Webサーバー（RailwayやRenderでの動作用）
 flask
-feedparser
+
+# データベース（SQLite + ORM）
+sqlalchemy>=1.4
+
+# 実行時の非同期処理に必要なもの（通常Python標準でOK）
+# asyncio（標準ライブラリなので書かなくてOK）
+
+# 任意：環境変数管理用
+python-dotenv

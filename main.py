@@ -6,6 +6,7 @@ from flask import Flask, request
 from threading import Thread
 import discord
 from discord.ext import commands
+from models.notification import Session, Notification
 from youtube import get_latest_video  # 追加してるなら
 
 # ====== 環境変数読み込み ======
@@ -82,6 +83,24 @@ async def trigger():
         print("URL:", video['link'])
     else:
         print("❌ 動画が取得できませんでした。")
+
+@bot.event
+async def on_voice_state_update(member, before, after):
+    # 参加時のみ
+    if before.channel == after.channel or not after.channel:
+        return
+
+    session = Session()
+    notifs = session.query(Notification).filter_by(
+        guild_id=str(member.guild.id),
+        voice_channel_id=str(after.channel.id)
+    ).all()
+    session.close()
+
+    for notif in notifs:
+        text_channel = member.guild.get_channel(int(notif.text_channel_id))
+        if text_channel:
+            await text_channel.send(f"🔔 {member.display_name} さんが <#{after.channel.id}> に入りました！")
 
 # ====== 実行 ======
 if __name__ == "__main__":
