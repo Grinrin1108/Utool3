@@ -8,7 +8,7 @@ import discord
 from discord.ext import commands
 from models.notification import Session, Notification
 from models.youtube_notification import YouTubeNotification
-from youtube import get_latest_video
+from models.youtube import get_latest_video
 from datetime import datetime
 
 # ====== 環境変数読み込み ======
