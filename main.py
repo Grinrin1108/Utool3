@@ -1,6 +1,7 @@
 import os
 from dotenv import load_dotenv
 import discord
+from discord.ext import commands
 from flask import Flask, request
 from threading import Thread
 
@@ -10,11 +11,36 @@ TOKEN = os.getenv("DISCORD_TOKEN")
 
 # ====== Discord Bot の設定 ======
 intents = discord.Intents.default()
-client = discord.Client(intents=intents)
+intents.message_content = True  # メッセージ内容を取得可能に
+intents.guilds = True
+intents.guild_messages = True
 
-@client.event
+bot = commands.Bot(command_prefix="!", intents=intents)
+
+@bot.event
 async def on_ready():
-    print(f"✅ Logged in as {client.user}")
+    print(f"✅ Logged in as {bot.user}")
+
+@bot.event
+async def on_message(message):
+    if message.author.bot:
+        return
+    print(f"[送信] {message.author}: {message.content}")
+    await bot.process_commands(message)
+
+@bot.event
+async def on_message_edit(before, after):
+    if before.author.bot:
+        return
+    if before.content == after.content:
+        return
+    print(f"[編集] {before.author}\n旧: {before.content}\n新: {after.content}")
+
+@bot.event
+async def on_message_delete(message):
+    if message.author.bot:
+        return
+    print(f"[削除] {message.author}: {message.content}")
 
 # ====== Flask サーバー設定 ======
 app = Flask(__name__)
@@ -49,4 +75,4 @@ def keep_alive():
 # ====== 実行 ======
 if __name__ == "__main__":
     keep_alive()         # Flask サーバー起動
-    client.run(TOKEN)    # Discord Bot 起動
+    bot.run(TOKEN)       # Discord Bot 起動
