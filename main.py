@@ -56,6 +56,7 @@ async def on_message(message):
 async def load_commands():
     for filepath in glob.glob("commands/*.py"):
         name = os.path.splitext(os.path.basename(filepath))[0]
+        print(f"🔄 Loading command: {name}")  # ← ログ出力を追加
         await bot.load_extension(f"commands.{name}")
 
 # ====== トリガー処理（仮） ======
