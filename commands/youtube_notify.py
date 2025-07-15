@@ -1,6 +1,7 @@
 from discord import app_commands, Interaction, Embed
 from discord.ext import commands
-from models.youtube import Session, YouTubeChannel
+from models.youtube_db import Session, YouTubeChannel
+
 
 class YouTubeNotify(commands.Cog):
     def __init__(self, bot):
