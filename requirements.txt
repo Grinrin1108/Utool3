@@ -12,3 +12,5 @@ sqlalchemy>=1.4
 
 # 任意：環境変数管理用
 python-dotenv
+
+feedparser
