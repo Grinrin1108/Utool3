@@ -7,7 +7,9 @@ from threading import Thread
 import discord
 from discord.ext import commands
 from models.notification import Session, Notification
-from youtube import get_latest_video  # 追加してるなら
+from models.youtube_notification import YouTubeNotification
+from youtube import get_latest_video
+from datetime import datetime
 
 # ====== 環境変数読み込み ======
 load_dotenv()
@@ -66,11 +68,11 @@ async def load_commands():
     for filepath in glob.glob("commands/*.py"):
         name = os.path.splitext(os.path.basename(filepath))[0]
         if name == "__init__":
-            continue  # __init__.pyは読み飛ばす
+            continue
         print(f"🔄 Loading command: {name}")
         await bot.load_extension(f"commands.{name}")
 
-# ====== トリガー処理 ======
+# ====== YouTube更新トリガー処理（10回Webhookで呼ばれた時用） ======
 async def trigger():
     print("🔔 Trigger called! (10 POSTs received)")
 
@@ -84,9 +86,9 @@ async def trigger():
     else:
         print("❌ 動画が取得できませんでした。")
 
+# ====== VC参加通知 ======
 @bot.event
 async def on_voice_state_update(member, before, after):
-    # 参加時のみ
     if before.channel == after.channel or not after.channel:
         return
 
@@ -102,12 +104,44 @@ async def on_voice_state_update(member, before, after):
         if text_channel:
             await text_channel.send(f"🔔 {member.display_name} さんが <#{after.channel.id}> に入りました！")
 
+# ====== YouTube通知チェックループ ======
+last_published_dict = {}
+
+async def check_youtube_updates():
+    await bot.wait_until_ready()
+    while not bot.is_closed():
+        print("🔁 Checking YouTube updates...")
+        session = Session()
+        notifs = session.query(YouTubeNotification).all()
+        session.close()
+
+        for notif in notifs:
+            video = get_latest_video(notif.youtube_channel_id)
+            if not video:
+                continue
+
+            last_time = last_published_dict.get(notif.youtube_channel_id)
+            if last_time == video["published"]:
+                continue  # 新着ではない
+
+            last_published_dict[notif.youtube_channel_id] = video["published"]
+
+            text_channel = bot.get_channel(int(notif.text_channel_id))
+            if text_channel:
+                await text_channel.send(
+                    f"📢 新しい動画が投稿されました！\n"
+                    f"**{video['title']}**\n{video['link']}"
+                )
+
+        await asyncio.sleep(300)  # 5分ごとにチェック
+
 # ====== 実行 ======
 if __name__ == "__main__":
     keep_alive()
 
     async def start_bot():
         await load_commands()
+        bot.loop.create_task(check_youtube_updates())  # YouTube通知起動
         await bot.start(TOKEN)
 
     asyncio.run(start_bot())
