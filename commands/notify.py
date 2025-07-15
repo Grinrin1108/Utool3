@@ -57,7 +57,10 @@ class Notify(commands.Cog):
         await interaction.response.send_message(embed=embed)
 
     async def cog_load(self):
-        self.bot.tree.add_command(self.notify)  # グループコマンドを登録
+        existing = self.bot.tree.get_command("notify")
+        if existing:
+            self.bot.tree.remove_command("notify")
+        self.bot.tree.add_command(self.notify)
 
 async def setup(bot):
     await bot.add_cog(Notify(bot))
