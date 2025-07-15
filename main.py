@@ -46,6 +46,8 @@ def keep_alive():
 @bot.event
 async def on_ready():
     print(f"✅ Logged in as {bot.user}")
+    activity = discord.CustomActivity(name="いたずら中😈")
+    await bot.change_presence(activity=activity)
     try:
         synced = await bot.tree.sync()
         print(f"🔄 Synced {len(synced)} slash commands.")
