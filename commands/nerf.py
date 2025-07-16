@@ -23,6 +23,7 @@ class Nerf(commands.Cog):
 
         try:
             await user.add_roles(nerf_role)
+            nerfed_users.add(user.id)  # グローバルセットに追加
             await interaction.response.send_message(f"{user.display_name} を全ステータス大ダウンしました。")
         except Exception as e:
             await interaction.response.send_message(f"ロール付与に失敗しました: {e}", ephemeral=True)
