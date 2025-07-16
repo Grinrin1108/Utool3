@@ -1,6 +1,7 @@
 import discord
 from discord import app_commands
 from discord.ext import commands
+from main import nerfed_users
 
 class Unnerf(commands.Cog):
     def __init__(self, bot):
@@ -22,6 +23,7 @@ class Unnerf(commands.Cog):
 
         try:
             await user.remove_roles(nerf_role)
+            nerfed_users.add(user.id)
             await interaction.response.send_message(f"{user.display_name} を全ステータス大ダウン解除しました。")
         except Exception as e:
             await interaction.response.send_message(f"ロール剥奪に失敗しました: {e}", ephemeral=True)

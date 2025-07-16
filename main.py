@@ -64,11 +64,23 @@ async def on_ready():
     except Exception as e:
         print(f"❌ Slash command sync failed: {e}")
 
+nerfed_users = set()
+
 @bot.event
 async def on_message(message):
     if message.author.bot:
         return
+
+    if message.author.id in nerfed_users:
+        try:
+            await message.delete()
+            print(f"🛑 Nerfed user {message.author} のメッセージを削除しました。")
+        except discord.Forbidden:
+            print("⚠️ メッセージを削除できませんでした。パーミッション確認してください。")
+        return  # コマンド処理もキャンセル
+
     await bot.process_commands(message)
+
 
 # ====== コマンドハンドラ読み込み ======
 async def load_commands():
