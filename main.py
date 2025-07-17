@@ -129,6 +129,12 @@ last_published_dict = {}
 async def check_youtube_updates():
     await bot.wait_until_ready()
     while not bot.is_closed():
+        now = datetime.now().hour
+        if 0 <= now < 7:
+            print("🌙 深夜時間帯（0〜7時）なのでスキップ中...")
+            await asyncio.sleep(300)
+            continue
+
         print("🔁 Checking YouTube updates...")
         session = Session()
         notifs = session.query(YouTubeNotification).all()
@@ -141,7 +147,7 @@ async def check_youtube_updates():
 
             last_time = last_published_dict.get(notif.youtube_channel_id)
             if last_time == video["published"]:
-                continue  # 新着ではない
+                continue
 
             last_published_dict[notif.youtube_channel_id] = video["published"]
 
@@ -152,7 +158,7 @@ async def check_youtube_updates():
                     f"**{video['title']}**\n{video['link']}"
                 )
 
-        await asyncio.sleep(300)  # 5分ごとにチェック
+        await asyncio.sleep(300)
 
 # ====== 起動時にテーブル作成 ======
 if __name__ == "__main__":
