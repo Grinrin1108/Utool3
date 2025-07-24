@@ -91,15 +91,29 @@ async def on_message(message):
 
     await bot.process_commands(message)
 
-# ====== メッセージ編集防止 ======
+# ====== メッセージ編集ログ ======
 @bot.event
 async def on_message_edit(before, after):
-    if after.author.id in nerfed_users:
+    if before.author.bot or before.content == after.content:
+        return
+
+    if before.author.id in nerfed_users:
         try:
             await after.delete()
             print(f"✏️ Nerfed user {after.author} の編集済メッセージを削除しました。")
         except discord.Forbidden:
             print("⚠️ 編集済みメッセージ削除できません")
+        return
+
+    if before.channel.id != LOG_CHANNEL_ID:
+        log_channel = bot.get_channel(LOG_CHANNEL_ID)
+        if log_channel:
+            await log_channel.send(
+                f"✏️ **#{before.channel.name}** にて {before.author.display_name} がメッセージを編集しました。\n"
+                f"**Before:** {before.content}\n"
+                f"**After:** {after.content}"
+            )
+
 
 # ====== メッセージ削除ログ ======
 @bot.event
