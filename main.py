@@ -9,7 +9,7 @@ from discord.ext import commands
 
 from models.youtube_db import Base, engine, Session
 from models.youtube_notification import YouTubeNotification
-from models.notification import Notification  # ← ここを追加
+from models.notification import Notification
 
 from models.youtube import get_latest_video
 from utils.youtube_checker import start_youtube_check
@@ -51,36 +51,64 @@ def keep_alive():
     thread = Thread(target=run_flask)
     thread.start()
 
+# ====== 起動時処理 ======
 @bot.event
 async def on_ready():
     print(f"✅ Logged in as {bot.user}")
     activity = discord.CustomActivity(name="いたずら中😈")
     await bot.change_presence(activity=activity)
-    await bot.tree.sync()
-    start_youtube_check(bot)  # 🔔 通知ループ開始！
     try:
         synced = await bot.tree.sync()
         print(f"🔄 Synced {len(synced)} slash commands.")
     except Exception as e:
         print(f"❌ Slash command sync failed: {e}")
+    start_youtube_check(bot)
 
+# ====== Nerf処理用メモリ保持 ======
 nerfed_users = set()
 
+# ====== メッセージ投稿防止 ======
 @bot.event
 async def on_message(message):
     if message.author.bot:
         return
-
     if message.author.id in nerfed_users:
         try:
             await message.delete()
             print(f"🛑 Nerfed user {message.author} のメッセージを削除しました。")
         except discord.Forbidden:
-            print("⚠️ メッセージを削除できませんでした。パーミッション確認してください。")
-        return  # コマンド処理もキャンセル
-
+            print("⚠️ メッセージ削除できません（パーミッション不足）")
+        return
     await bot.process_commands(message)
 
+# ====== メッセージ編集防止 ======
+@bot.event
+async def on_message_edit(before, after):
+    if after.author.id in nerfed_users:
+        try:
+            await after.delete()
+            print(f"✏️ Nerfed user {after.author} の編集済メッセージを削除しました。")
+        except discord.Forbidden:
+            print("⚠️ 編集済みメッセージ削除できません")
+            
+# ====== リアクション禁止（追加） ======
+@bot.event
+async def on_raw_reaction_add(payload):
+    if payload.user_id in nerfed_users:
+        channel = bot.get_channel(payload.channel_id)
+        if channel:
+            try:
+                message = await channel.fetch_message(payload.message_id)
+                await message.remove_reaction(payload.emoji, discord.Object(id=payload.user_id))
+                print(f"⛔ Nerfed user のリアクションを削除")
+            except Exception as e:
+                print("⚠️ リアクション削除失敗", e)
+
+# ====== リアクション禁止（削除） ======
+@bot.event
+async def on_raw_reaction_remove(payload):
+    if payload.user_id in nerfed_users:
+        print("⛔ Nerfed user のリアクション削除もブロック対象（ただし無視するだけ）")
 
 # ====== コマンドハンドラ読み込み ======
 async def load_commands():
@@ -94,10 +122,8 @@ async def load_commands():
 # ====== YouTube更新トリガー処理（10回Webhookで呼ばれた時用） ======
 async def trigger():
     print("🔔 Trigger called! (10 POSTs received)")
-
     channel_id = "UC_x5XG1OV2P6uZZ5FSM9Ttw"
     video = get_latest_video(channel_id)
-
     if video:
         print("📹 最新動画:")
         print("タイトル:", video['title'])
@@ -150,7 +176,6 @@ async def check_youtube_updates():
                 continue
 
             last_published_dict[notif.youtube_channel_id] = video["published"]
-
             text_channel = bot.get_channel(int(notif.text_channel_id))
             if text_channel:
                 await text_channel.send(
@@ -160,11 +185,9 @@ async def check_youtube_updates():
 
         await asyncio.sleep(300)
 
-# ====== 起動時にテーブル作成 ======
+# ====== 起動処理 ======
 if __name__ == "__main__":
-    # --- ここで全テーブルを一括作成 ---
     Base.metadata.create_all(bind=engine)
-
     keep_alive()
 
     async def start_bot():
