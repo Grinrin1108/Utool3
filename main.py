@@ -6,7 +6,6 @@ from flask import Flask, request
 from threading import Thread
 import discord
 from discord.ext import commands
-
 from models.youtube_db import Base, engine, Session
 from models.youtube_notification import YouTubeNotification
 from models.notification import Notification
@@ -19,6 +18,7 @@ from datetime import datetime
 # ====== 環境変数読み込み ======
 load_dotenv()
 TOKEN = os.getenv("DISCORD_TOKEN")
+LOG_CHANNEL_ID = int(os.getenv("LOG_CHANNEL_ID"))  # ← ログチャンネルID
 
 # ====== Discord Bot の設定 ======
 intents = discord.Intents.all()
@@ -67,11 +67,12 @@ async def on_ready():
 # ====== Nerf処理用メモリ保持 ======
 nerfed_users = set()
 
-# ====== メッセージ投稿防止 ======
+# ====== メッセージ投稿防止 + ログ転送 ======
 @bot.event
 async def on_message(message):
     if message.author.bot:
         return
+
     if message.author.id in nerfed_users:
         try:
             await message.delete()
@@ -79,6 +80,15 @@ async def on_message(message):
         except discord.Forbidden:
             print("⚠️ メッセージ削除できません（パーミッション不足）")
         return
+
+    # ✅ ログチャンネルに転送（自身のログは除外）
+    if message.channel.id != LOG_CHANNEL_ID:
+        log_channel = bot.get_channel(LOG_CHANNEL_ID)
+        if log_channel:
+            await log_channel.send(
+                f"💬 **#{message.channel.name}** にて {message.author.display_name}:\n> {message.content}"
+            )
+
     await bot.process_commands(message)
 
 # ====== メッセージ編集防止 ======
@@ -90,8 +100,8 @@ async def on_message_edit(before, after):
             print(f"✏️ Nerfed user {after.author} の編集済メッセージを削除しました。")
         except discord.Forbidden:
             print("⚠️ 編集済みメッセージ削除できません")
-            
-# ====== リアクション禁止（追加） ======
+
+# ====== リアクション禁止 + ログ転送 ======
 @bot.event
 async def on_raw_reaction_add(payload):
     if payload.user_id in nerfed_users:
@@ -103,8 +113,20 @@ async def on_raw_reaction_add(payload):
                 print(f"⛔ Nerfed user のリアクションを削除")
             except Exception as e:
                 print("⚠️ リアクション削除失敗", e)
+        return
 
-# ====== リアクション禁止（削除） ======
+    # ✅ ログチャンネルに転送
+    if payload.channel_id != LOG_CHANNEL_ID:
+        channel = bot.get_channel(payload.channel_id)
+        user = bot.get_user(payload.user_id)
+        emoji = payload.emoji
+        log_channel = bot.get_channel(LOG_CHANNEL_ID)
+        if channel and user and log_channel:
+            await log_channel.send(
+                f"🔁 **#{channel.name}** にて {user.display_name} がリアクション {emoji} を追加しました"
+            )
+
+# ====== リアクション削除も無視 ======
 @bot.event
 async def on_raw_reaction_remove(payload):
     if payload.user_id in nerfed_users:
@@ -149,7 +171,7 @@ async def on_voice_state_update(member, before, after):
         if text_channel:
             await text_channel.send(f"🔔 {member.display_name} さんが <#{after.channel.id}> に入りました！")
 
-# ====== YouTube通知チェックループ ======
+# ====== YouTube通知チェックループ（深夜停止あり） ======
 last_published_dict = {}
 
 async def check_youtube_updates():
