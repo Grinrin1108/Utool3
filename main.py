@@ -101,6 +101,16 @@ async def on_message_edit(before, after):
         except discord.Forbidden:
             print("⚠️ 編集済みメッセージ削除できません")
 
+# ====== メッセージ削除ログ ======
+@bot.event
+async def on_message_delete(message):
+    if message.channel.id != LOG_CHANNEL_ID and not message.author.bot:
+        log_channel = bot.get_channel(LOG_CHANNEL_ID)
+        if log_channel:
+            await log_channel.send(
+                f"🗑️ **#{message.channel.name}** にて {message.author.display_name} のメッセージが削除されました:\n> {message.content}"
+            )
+
 # ====== リアクション禁止 + ログ転送 ======
 @bot.event
 async def on_raw_reaction_add(payload):
@@ -126,11 +136,22 @@ async def on_raw_reaction_add(payload):
                 f"🔁 **#{channel.name}** にて {user.display_name} がリアクション {emoji} を追加しました"
             )
 
-# ====== リアクション削除も無視 ======
+# ====== リアクション削除ログ（nerfedは無視） ======
 @bot.event
 async def on_raw_reaction_remove(payload):
     if payload.user_id in nerfed_users:
         print("⛔ Nerfed user のリアクション削除もブロック対象（ただし無視するだけ）")
+        return
+
+    if payload.channel_id != LOG_CHANNEL_ID:
+        channel = bot.get_channel(payload.channel_id)
+        user = bot.get_user(payload.user_id)
+        emoji = payload.emoji
+        log_channel = bot.get_channel(LOG_CHANNEL_ID)
+        if channel and user and log_channel:
+            await log_channel.send(
+                f"❌ **#{channel.name}** にて {user.display_name} がリアクション {emoji} を削除しました"
+            )
 
 # ====== コマンドハンドラ読み込み ======
 async def load_commands():
